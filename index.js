@@ -15,12 +15,14 @@ const typeDefs = `
         description: String!
         category: PhotoCategory!
         postedBy: User!
+        taggedUsers: [User!]!
     }
     type User {
         githublogin: ID!
         name: String!
         avatar: String
         postedPhotos: [Photo!]!
+        inPhotos: [Photo!]!
     }
     input PostPhotoInput{
         name: String!
@@ -43,6 +45,11 @@ var users = [
     {"githublogin":"mHattrup", "name":"Mike Hattrup"},
     {"githublogin":"gPlake", "name":"Glen Plake"},
     {"githublogin":"sSchimidt", "name":"Scot Schimidt"},
+]
+var tags = [
+    {"photoId":"1", "userId":"gPlake"},
+    {"photoId":"3", "userId":"sSchimidt"},
+    {"photoId":"3", "userId":"mHattrup"},
 ]
 var photos = [
     {
@@ -87,14 +94,22 @@ const resolvers = {
   },
   Photo: {
     url: root => `http://letox.com/img/${root.id}.jpg`,
-    postedBy: root => {
-        return users.find(u => u.githublogin === root.githublogin)
-    }
+    postedBy: root => users.find(u => u.githublogin === root.githublogin),
+    taggedUsers: root => tags.filter(tag => tag.photoId === root.id)
+    // Convert the array of tags into an array of userIDs
+    .map(tag => tag.userId)
+    // Converts array of userIDs into an array of user objects
+    .map(userId => users.find(u => u.githublogin === userId))
   },
   User: {
-      postedPhotos: root => {
-          return photos.filter(p => p.githublogin === root.githublogin)
-      }
+    postedPhotos: root => photos.filter(p => p.githublogin === root.githublogin),
+    inPhotos: root => tags
+    // Returns an array of tags that only contain the current user
+    .filter(tag => tag.userId === root.id)
+    // Convert the array of tags into array of photoIDs
+    .map(tag => tag.photoId)
+    // Convert array of photoIDs into array of photo objects
+    .map(photoId => photos.find(p => p.id === photoId))
   }
 };
 
